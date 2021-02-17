@@ -1,11 +1,11 @@
 CC = $(CXX)
 
-CXXFLAGS += -O3 -Wall -Wextra -std=c++14
+CXXFLAGS += -O3 -Wall -Wextra -pedantic -std=c++14
 LIBFLAGS = -fPIC
 EXEC = example
 RM = rm -f
 
-INCLUDES_DIRS = ./ ../includes
+INCLUDES_DIRS = ./ ../include
 INCLUDES = $(shell find $(INCLUDES_DIRS) -type f -name '*.h')
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)

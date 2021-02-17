@@ -1,0 +1,53 @@
+os: linux
+dist: focal
+sudo: true
+
+language:
+  - cpp
+
+addons:
+  apt:
+    packages:
+      - libgtest-dev
+      - cmake
+      - lcov
+
+install:
+  - pip install --user cpp-coveralls
+
+script:
+  - echo "Installing Google Test Framework"
+  - pushd /usr/src/gtest
+  - sudo cmake CMakeLists.txt
+  - sudo make
+  - sudo cp ./lib/libgtest*.a /usr/lib
+  - popd
+  - echo "Building & Running Sample Applications"
+  - pushd examples
+  - make run
+  - popd
+  - echo "Building & Running Unit Tests"
+  - pushd tests
+  - make run
+  - popd
+  - echo "Running Test Coverage"
+  - pushd tests
+  - make clean && make coverage
+  - popd
+  - echo "Done"
+
+after_success:
+  # Collect coverage and push to coveralls.info.
+  # Ignore third party source code and tests.
+  - if [ "${CC}" = "gcc" ]; then
+        cd tests;
+        coveralls
+            --root ../
+            --build-root ./
+            --exclude lib
+            --gcov-options '\--long-file-names --preserve-paths';
+    fi
+
+notifications:
+  email: false
+
