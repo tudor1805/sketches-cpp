@@ -5,14 +5,14 @@
 #ifndef INCLUDES_TEST_DATASETS_H_
 #define INCLUDES_TEST_DATASETS_H_
 
-#include <sstream>
-#include <vector>
-#include <string>
-#include <memory>
-#include <limits>
-#include <random>
-#include <functional>
 #include <algorithm>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <random>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace ddsketch { namespace test {
 
@@ -51,8 +51,9 @@ class DataSet {
 
         str_repr << "[ ";
 
-        for (const auto& value : data_)
+        for (const auto& value : data_) {
             str_repr << value << " ";
+        }
 
         str_repr << " ]";
 
@@ -73,10 +74,11 @@ class DataSet {
 
         auto it = std::lower_bound(tmp_data.begin(), tmp_data.end(), value);
 
-        if (it == tmp_data.end())
+        if (it == tmp_data.end()) {
             index = tmp_data.size() - 1;
-        else
+        } else {
             index = std::distance(tmp_data.begin(), it);
+        }
 
         return index;
     }
@@ -118,6 +120,17 @@ class DataSet {
  protected:
     DataSet() = default;
 
+    DataSet(const DataSet& dataset) = default;
+    DataSet(DataSet&& dataset) noexcept = default;
+
+    DataSet& operator=(const DataSet& dataset) = default;
+    DataSet& operator=(DataSet&& dataset) noexcept = default;
+
+    DataSetValueContainer& data() {
+        return data_;
+    }
+
+ private:
     DataSetValueContainer data_;
 };
 
@@ -132,11 +145,11 @@ class EmptyDataSet : public DataSet<DataValue> {
     }
 
     void add(DataValue val) {
-        data_.push_back(val);
+        data().push_back(val);
     }
 
     void add_all(const DataSetValueContainer& values) {
-        data_.insert(data_.begin(), values.begin(), values.end());
+        data().insert(data().begin(), values.begin(), values.end());
     }
 };
 
@@ -147,11 +160,11 @@ class UniformForward : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [n = 0] () mutable {
                 return n++;
             });
@@ -165,11 +178,11 @@ class UniformBackward : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [n = size] () mutable {
                 return n--;
             });
@@ -183,11 +196,11 @@ class NegativeUniformForward : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [n = size] () mutable {
                 return -n--;
             });
@@ -201,11 +214,11 @@ class NegativeUniformBackward : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [n = 0] () mutable {
                 return -n++;
             });
@@ -219,11 +232,11 @@ class NumberLineForward : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [n = -size / 2 + 1] () mutable {
                 return -n++;
             });
@@ -237,11 +250,11 @@ class NumberLineBackward : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [n = size / 2] () mutable {
                 return n--;
             });
@@ -255,16 +268,17 @@ class UniformZoomIn : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
         auto idx = 0;
 
         for (int item = 0; item < size / 2; ++item) {
-            data_[idx++] = item;
-            data_[idx++] = size - item - 1;
+            data()[idx++] = item;
+            data()[idx++] = size - item - 1;
         }
 
-        if (size % 2)
-            data_[idx++] = size / 2;
+        if (size % 2 != 0) {
+            data()[idx++] = size / 2;
+        }
     }
 };
 
@@ -275,24 +289,24 @@ class UniformZoomOut : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         auto idx = 0;
 
-        if (size % 2) {
-            data_[idx++] = size / 2;
+        if (size % 2 != 0) {
+            data()[idx++] = size / 2;
 
             int half = size / 2;
             for (int item = 1; item < half + 1; ++item) {
-                data_[idx++] = half + item;
-                data_[idx++] = half - item;
+                data()[idx++] = half + item;
+                data()[idx++] = half - item;
             }
         } else {
             auto half = std::ceil(size / 2.0) - 0.5;
-            auto upper_limit = static_cast<int>(half + 0.5);
+            auto upper_limit = std::lround(half);
             for (int item = 0; item < upper_limit; ++item) {
-                data_[idx++] = static_cast<int>(half + item + 0.5);
-                data_[idx++] = static_cast<int>(half - item - 0.5);
+                data()[idx++] = std::lround(half + item);
+                data()[idx++] = std::floor(half - item - 0.5);
             }
         }
     }
@@ -305,7 +319,7 @@ class UniformSqrt : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         auto idx = 0;
         auto t = static_cast<int>(std::sqrt(2 * size));
@@ -320,7 +334,7 @@ class UniformSqrt : public DataSet<DataValue> {
 
             for (int j = 0; j < t - i; ++j) {
                 if (item < size) {
-                    data_[idx++] = item;
+                    data()[idx++] = item;
                     emitted += 1;
                 }
                 item += skip;
@@ -340,7 +354,7 @@ class UniformSqrt : public DataSet<DataValue> {
 
 class Constant : public DataSet<DataValue> {
  public:
-    explicit Constant(DataValue constant = 42.0)
+    explicit Constant(DataValue constant = kDefaultConstant)
         : constant_(constant) {
     }
 
@@ -349,24 +363,27 @@ class Constant : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [this] () { return constant_; });
     }
 
  private:
     DataValue constant_;
+
+    static constexpr auto kDefaultConstant = 42.0;
 };
 
 class Exponential : public DataSet<DataValue> {
  public:
-    explicit Exponential(DataValue alpha = 100)
+    explicit Exponential(DataValue alpha = kDefaultAlpha)
         : alpha_(alpha) {
-        if (alpha <= 0)
+        if (alpha <= 0) {
             throw std::invalid_argument("Argument should be a positive number");
+        }
     }
 
     std::string name() const override {
@@ -374,7 +391,7 @@ class Exponential : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::random_device random_device;
         std::mt19937_64 generator(random_device());
@@ -382,8 +399,8 @@ class Exponential : public DataSet<DataValue> {
         std::exponential_distribution<DataValue> exponential(alpha_);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [this, generator, exponential] () mutable {
                 return exponential(generator);
             });
@@ -391,16 +408,19 @@ class Exponential : public DataSet<DataValue> {
 
  private:
     DataValue alpha_;
+
+    static constexpr auto kDefaultAlpha = 100;
 };
 
 class Lognormal : public DataSet<DataValue> {
  public:
-    Lognormal(DataValue mean = 0.0,
-              DataValue sigma = 1.0,
-              DataValue scale = 100.0)
+    explicit Lognormal(DataValue mean = kDefaultMean,
+                       DataValue sigma = kDefaultSigma,
+                       DataValue scale = kDefaultScale)
         : mean_(mean), sigma_(sigma), scale_(scale) {
-        if (scale <= 0)
+        if (scale <= 0) {
             throw std::invalid_argument("Scale should be a positive number");
+        }
     }
 
     std::string name() const override {
@@ -408,7 +428,7 @@ class Lognormal : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::random_device random_device;
         std::mt19937_64 generator(random_device());
@@ -416,8 +436,8 @@ class Lognormal : public DataSet<DataValue> {
         std::lognormal_distribution<DataValue> lognormal(mean_, sigma_);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [this, generator, lognormal] () mutable {
                 return lognormal(generator) / scale_;
             });
@@ -427,12 +447,16 @@ class Lognormal : public DataSet<DataValue> {
     DataValue mean_;
     DataValue sigma_;
     DataValue scale_;
+
+    static constexpr auto kDefaultMean = 0.0;
+    static constexpr auto kDefaultSigma = 1.0;
+    static constexpr auto kDefaultScale = 100.0;
 };
 
 class Normal : public DataSet<DataValue> {
  public:
-    explicit Normal(DataValue loc = 37.4,
-                    DataValue scale = 1.0)
+    explicit Normal(DataValue loc = kDefaultLoc,
+                    DataValue scale = kDefaultScale)
         : loc_(loc),
           scale_(scale) {
     }
@@ -442,7 +466,7 @@ class Normal : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::random_device random_device;
         std::mt19937_64 generator(random_device());
@@ -450,8 +474,8 @@ class Normal : public DataSet<DataValue> {
         std::normal_distribution<DataValue> normal(loc_, scale_);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [generator, normal] () mutable {
                 return normal(generator);
             });
@@ -460,12 +484,15 @@ class Normal : public DataSet<DataValue> {
  private:
     DataValue loc_;
     DataValue scale_;
+
+    static constexpr auto kDefaultLoc = 37.4;
+    static constexpr auto kDefaultScale = 1.0;
 };
 
 class Laplace : public DataSet<DataValue> {
  public:
-    explicit Laplace(DataValue loc = 11278.0,
-                     DataValue scale = 100.0)
+    explicit Laplace(DataValue loc = kDefaultLoc,
+                     DataValue scale = kDefaultScale)
         : loc_(loc),
           scale_(scale) {
     }
@@ -475,7 +502,7 @@ class Laplace : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::random_device random_device;
         std::mt19937_64 generator(random_device());
@@ -483,13 +510,14 @@ class Laplace : public DataSet<DataValue> {
         std::uniform_real_distribution<DataValue> random(0.0, 1.0);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [this, generator, random] () mutable {
                 auto laplace_x = -std::log(1.0 - random(generator)) * scale_;
 
-                if (random(generator) < 0.5)
+                if (random(generator) < 0.5) {
                     laplace_x = -laplace_x;
+                }
 
                 return laplace_x + loc_;
             });
@@ -498,13 +526,16 @@ class Laplace : public DataSet<DataValue> {
  private:
     DataValue loc_;
     DataValue scale_;
+
+    static constexpr auto kDefaultLoc = 11278.0;
+    static constexpr auto kDefaultScale = 100.0;
 };
 
 class Bimodal : public DataSet<DataValue> {
  public:
-    explicit Bimodal(DataValue right_loc = 17.3,
-                     DataValue left_loc = -2.0,
-                     DataValue left_std = 3.0)
+    explicit Bimodal(DataValue right_loc = kDefaultRightLoc,
+                     DataValue left_loc = kDefaultLeftLoc,
+                     DataValue left_std = kDefaultLeftStd)
         :  right_loc_(right_loc),
            left_loc_(left_loc),
            left_std_(left_std) {
@@ -515,7 +546,7 @@ class Bimodal : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::random_device random_device;
         std::mt19937_64 generator(random_device());
@@ -524,14 +555,15 @@ class Bimodal : public DataSet<DataValue> {
         std::normal_distribution<DataValue> normal(left_loc_, left_std_);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [this, generator, random, normal] () mutable {
                 if (random(generator) > 0.5) {
                     auto laplace_x = -std::log(1.0 - random(generator));
 
-                    if (random(generator) < 0.5)
+                    if (random(generator) < 0.5) {
                         laplace_x = -laplace_x;
+                    }
 
                     return laplace_x + right_loc_;
                 } else {
@@ -544,16 +576,20 @@ class Bimodal : public DataSet<DataValue> {
     DataValue right_loc_;
     DataValue left_loc_;
     DataValue left_std_;
+
+    static constexpr auto kDefaultRightLoc = 17.3;
+    static constexpr auto kDefaultLeftLoc = -2.0;
+    static constexpr auto kDefaultLeftStd = 3.0;
 };
 
 class Mixed : public DataSet<DataValue> {
  public:
-    explicit Mixed(DataValue mean = 0.0,
-                   DataValue sigma = 0.25,
-                   DataValue scale_factor = 0.1,
-                   DataValue loc = 10.0,
-                   DataValue scale = 0.5,
-                   DataValue ratio = 0.9)
+    explicit Mixed(DataValue mean = kDefaultMean,
+                   DataValue sigma = kDefaultSigma,
+                   DataValue scale_factor = kDefaultScaleFactor,
+                   DataValue loc = kDefaultLoc,
+                   DataValue scale = kDefaultScale,
+                   DataValue ratio = kDefaultRatio)
         : mean_(mean),
           sigma_(sigma),
           scale_factor_(scale_factor),
@@ -567,7 +603,7 @@ class Mixed : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::random_device random_device;
         std::mt19937_64 generator(random_device());
@@ -577,13 +613,14 @@ class Mixed : public DataSet<DataValue> {
         std::normal_distribution<DataValue> normal(loc_, scale_);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [this, generator, random, lognormal, normal] () mutable {
-                if (random(generator) < ratio_)
+                if (random(generator) < ratio_) {
                     return scale_factor_ * lognormal(generator);
-                else
+                } else {
                     return normal(generator);
+                }
             });
     }
 
@@ -594,14 +631,21 @@ class Mixed : public DataSet<DataValue> {
     DataValue loc_;
     DataValue scale_;
     DataValue ratio_;
+
+    static constexpr auto kDefaultMean = 0.0;
+    static constexpr auto kDefaultSigma = 0.25;
+    static constexpr auto kDefaultScaleFactor = 0.1;
+    static constexpr auto kDefaultLoc = 10.0;
+    static constexpr auto kDefaultScale = 0.5;
+    static constexpr auto kDefaultRatio = 0.9;
 };
 
 class Trimodal : public DataSet<DataValue> {
  public:
-    explicit Trimodal(DataValue right_loc = 17.3,
-                      DataValue left_loc = 5.0,
-                      DataValue left_std = 1.0,
-                      DataValue exp_scale = 0.01)
+    explicit Trimodal(DataValue right_loc = kDefaulRightLoc,
+                      DataValue left_loc = kDefaultLeftLoc,
+                      DataValue left_std = kDefaultLeftStd,
+                      DataValue exp_scale = kDefaultExpScale)
         : right_loc_(right_loc),
           left_loc_(left_loc),
           left_std_(left_std),
@@ -613,7 +657,7 @@ class Trimodal : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::random_device random_device;
         std::mt19937_64 generator(random_device());
@@ -623,16 +667,17 @@ class Trimodal : public DataSet<DataValue> {
         std::exponential_distribution<DataValue> exponential(exp_scale_);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [this, generator, random, normal, exponential] () mutable {
                 auto random_value = random(generator);
 
                 if (random_value > 2.0 / 3.0) {
                     auto laplace_x = -std::log(1.0 - random(generator));
 
-                    if (random(generator) < 0.5)
+                    if (random(generator) < 0.5) {
                         laplace_x = -laplace_x;
+                    }
 
                     return laplace_x + right_loc_;
                 } else if (random_value > 1.0 / 3.0) {
@@ -648,12 +693,17 @@ class Trimodal : public DataSet<DataValue> {
     DataValue left_loc_;
     DataValue left_std_;
     DataValue exp_scale_;
+
+    static constexpr auto kDefaulRightLoc = 17.3;
+    static constexpr auto kDefaultLeftLoc = 5.0;
+    static constexpr auto kDefaultLeftStd = 1.0;
+    static constexpr auto kDefaultExpScale = 0.01;
 };
 
 class Integers : public DataSet<DataValue> {
  public:
-    explicit Integers(DataValue loc = 4.3,
-                      DataValue scale = 5.0)
+    explicit Integers(DataValue loc = kDefaultLoc,
+                      DataValue scale = kDefaultScale)
         : loc_(loc),
           scale_(scale) {
     }
@@ -663,15 +713,15 @@ class Integers : public DataSet<DataValue> {
     }
 
     void populate(int size) override {
-        data_.resize(size);
+        data().resize(size);
 
         std::random_device random_device;
         std::mt19937 generator(random_device());
         std::normal_distribution<DataValue> distribution(loc_, scale_);
 
         std::generate(
-            data_.begin(),
-            data_.end(),
+            data().begin(),
+            data().end(),
             [generator, distribution] () mutable {
                 return static_cast<IntegerValue>(distribution(generator));
             });
@@ -680,6 +730,9 @@ class Integers : public DataSet<DataValue> {
  private:
     DataValue loc_;
     DataValue scale_;
+
+    static constexpr auto kDefaultLoc = 4.3;
+    static constexpr auto kDefaultScale = 5.0;
 };
 
 using GenericDataSet = DataSet<DataValue>;

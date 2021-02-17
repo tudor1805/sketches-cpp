@@ -4,11 +4,11 @@
  */
 
 #include <iostream>
-#include <vector>
 #include <map>
+#include <vector>
 
-#include "../includes/ddsketch/ddsketch.h"
-#include "../includes/test/datasets.h"
+#include "../include/ddsketch/ddsketch.h"
+#include "../include/test/datasets.h"
 
 #include "gtest/gtest.h"
 
@@ -20,7 +20,12 @@ using StoreValue = int64_t;
 using StoreValues = std::vector<int64_t>;
 using StoreValueList = std::vector<StoreValues>;
 
-#define EXPECT_ALMOST_EQ(a, b) EXPECT_NEAR((a), (b), 0.000001)
+template <typename T1, typename T2>
+constexpr auto EXPECT_ALMOST_EQ(T1 a, T2 b) {
+    constexpr auto kEpsilon = 0.000001;
+
+    EXPECT_NEAR(a, b, kEpsilon);
+}
 
 template <typename Mapping>
 class MappingTest : public ::testing::Test {
@@ -34,21 +39,25 @@ class MappingTest : public ::testing::Test {
     static RealValue relative_error(RealValue expected_min,
                                     RealValue expected_max,
                                     RealValue actual) {
-        if (expected_min < 0 || expected_max < 0 || actual < 0)
+        if (expected_min < 0 || expected_max < 0 || actual < 0) {
             throw std::invalid_argument("Arguments should be positive numbers");
-
-        if (expected_min <= actual && actual <= expected_max)
-            return 0.0;
-
-        if (expected_min == 0 && expected_max == 0) {
-            if (actual == 0)
-                return 0.0;
-            else
-                return std::numeric_limits<RealValue>::max();
         }
 
-        if (actual < expected_min)
+        if (expected_min <= actual && actual <= expected_max) {
+            return 0.0;
+        }
+
+        if (expected_min == 0 && expected_max == 0) {
+            if (actual == 0) {
+                return 0.0;
+            } else {
+                return std::numeric_limits<RealValue>::max();
+            }
+        }
+
+        if (actual < expected_min) {
             return (expected_min - actual) / expected_min;
+        }
 
         return (actual - expected_max) / expected_max;
     }
@@ -80,7 +89,7 @@ class MappingTest : public ::testing::Test {
 
     /* Test the mapping on a large range of relative accuracies */
     static void test_relative_accuracy() {
-        RealValue rel_acc_mult = 1 - std::sqrt(2) * 1.0e-1;
+        RealValue rel_acc_mult = 1.0 - std::sqrt(2) * 1.0e-1;
         RealValue min_rel_acc = 1.0e-8;
         RealValue rel_acc = 1 - 1.0e-3;
 
@@ -94,9 +103,8 @@ class MappingTest : public ::testing::Test {
 
     static void test_offsets() {
         static constexpr RealValue kRelativeAccuracy = 0.01;
-        std::vector<RealValue> offsets = {0, 1, -12.23, 7768.3};
 
-        for (auto offset : offsets) {
+        for (const auto offset : {0.0, 1.0, -12.23, 7768.3}) {
             auto mapping = create_mapping(kRelativeAccuracy, offset);
             EXPECT_EQ(mapping.key(1), static_cast<int>(offset));
         }
@@ -164,18 +172,20 @@ class Counter {
     explicit Counter(const StoreValues& values) {
         for (const auto& value : values) {
             /* The element does not exist */
-            if (map_.find(value) == map_.end())
+            if (map_.find(value) == map_.end()) {
                 map_[value] = 1;
-            else
+            } else {
                 ++map_[value];
+            }
         }
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Counter& counter) {
         os << "{ ";
 
-        for (const auto &pair : counter.map_)
+        for (const auto &pair : counter.map_) {
             os << pair.first << ":" << pair.second << " ";
+        }
 
         os << "}";
 
@@ -216,15 +226,21 @@ class Counter {
         return map_[key];
     }
 
- public:
+ private:
     KeyValueContainer map_;
 };
 
 template <typename ConcreteStore>
 class StoreTest : public ::testing::Test {
+ public:
+    StoreTest(const StoreTest& test) = delete;
+    StoreTest(StoreTest&& test) = delete;
+
+    StoreTest& operator=(const StoreTest& test) = delete;
+    StoreTest& operator=(StoreTest&& test) = delete;
+
  protected:
     StoreTest() = default;
-
     virtual void test_values(const ConcreteStore& store,
                              const StoreValues& values) = 0;
 
@@ -315,15 +331,17 @@ class StoreTest : public ::testing::Test {
         StoreValues values;
 
         for (auto x = 0; x < 10; ++x) {
-            for (auto i = 0; i < 2 * x; ++i)
+            for (auto i = 0; i < 2 * x; ++i) {
                 values.push_back(x);
+            }
         }
         test_store(values);
 
         values.clear();
         for (auto x = 0; x < 10; ++x) {
-            for (auto i = 0; i < 2 * x; ++i)
+            for (auto i = 0; i < 2 * x; ++i) {
                 values.push_back(-x);
+            }
         }
         test_store(values);
     }
@@ -397,9 +415,10 @@ class StoreTest : public ::testing::Test {
                 });
         result.reserve(total_size);
 
-        for (const auto& store_values : values_list)
+        for (const auto& store_values : values_list) {
             result.insert(
                 result.end(), store_values.begin(), store_values.end());
+        }
 
         return result;
     }
@@ -446,8 +465,9 @@ class DenseStoreTest : public StoreTest<DenseStore> {
 
             auto idx = 0;
             for (const auto& item : store.bins()) {
-                if (item != 0)
+                if (item != 0) {
                     EXPECT_EQ(counter[idx + store.offset()], item);
+                }
                 ++idx;
             }
         }
@@ -456,8 +476,9 @@ class DenseStoreTest : public StoreTest<DenseStore> {
     void test_store(const StoreValues& store_values) override {
         auto store = DenseStore();
 
-        for (const auto& value : store_values)
+        for (const auto& value : store_values) {
             store.add(value);
+        }
 
         test_values(store, store_values);
     }
@@ -468,8 +489,9 @@ class DenseStoreTest : public StoreTest<DenseStore> {
         for (const auto& store_values : store_values_list) {
             auto intermediate_store = DenseStore();
 
-            for (const auto& value : store_values)
+            for (const auto& value : store_values) {
                 intermediate_store.add(value);
+            }
 
             store.merge(intermediate_store);
         }
@@ -552,7 +574,7 @@ class CollapsingLowestDenseStoreTest
     : public StoreTest<CollapsingLowestDenseStore> {
  protected:
     void test_values(const CollapsingLowestDenseStore& store,
-                     const StoreValues& values) {
+                     const StoreValues& values) override {
         auto counter = Counter(values);
 
         auto expected_total_count = counter.sum_values();
@@ -575,8 +597,9 @@ class CollapsingLowestDenseStoreTest
 
             auto idx = 0;
             for (const auto& sbin : store.bins()) {
-                if (sbin != 0)
+                if (sbin != 0) {
                     EXPECT_EQ(normalized_counter[idx + store.offset()], sbin);
+                }
                 ++idx;
             }
         }
@@ -588,8 +611,9 @@ class CollapsingLowestDenseStoreTest
         for (const auto bin_limit : test_bin_limits) {
             auto store = CollapsingLowestDenseStore(bin_limit);
 
-            for (const auto& value : values)
+            for (const auto& value : values) {
                 store.add(value);
+            }
 
             test_values(store, values);
         }
@@ -604,8 +628,9 @@ class CollapsingLowestDenseStoreTest
             for (const auto& store_values : store_values_list) {
                 auto intermediate_store = CollapsingLowestDenseStore(bin_limit);
 
-                for (const auto& value : store_values)
+                for (const auto& value : store_values) {
                     intermediate_store.add(value);
+                }
 
                 store.merge(intermediate_store);
             }
@@ -678,7 +703,7 @@ class CollapsingHighestDenseStoreTest
     : public StoreTest<CollapsingHighestDenseStore> {
  private:
     void test_values(const CollapsingHighestDenseStore& store,
-                     const StoreValues& values) {
+                     const StoreValues& values) override {
         auto counter = Counter(values);
 
         auto expected_total_count = counter.sum_values();
@@ -702,8 +727,9 @@ class CollapsingHighestDenseStoreTest
 
             auto idx = 0;
             for (const auto& item : store.bins()) {
-                if (item != 0)
+                if (item != 0) {
                     EXPECT_EQ(normalized_counter[idx + store.offset()], item);
+                }
                 ++idx;
             }
         }
@@ -715,8 +741,9 @@ class CollapsingHighestDenseStoreTest
         for (const auto bin_limit : test_bin_limits) {
             auto store = CollapsingHighestDenseStore(bin_limit);
 
-            for (const auto& value : values)
+            for (const auto& value : values) {
                 store.add(value);
+            }
 
             test_values(store, values);
         }
@@ -732,8 +759,9 @@ class CollapsingHighestDenseStoreTest
                 auto intermediate_store =
                     CollapsingHighestDenseStore(bin_limit);
 
-                for (const auto& value : store_values)
+                for (const auto& value : store_values) {
                     intermediate_store.add(value);
+                }
 
                 store.merge(intermediate_store);
             }
@@ -833,7 +861,15 @@ class SketchSummary {
 
 template <typename ConcreteDDSketch>
 class BaseDDSketchTest : public ::testing::Test, CRTP<ConcreteDDSketch> {
+ public:
+    BaseDDSketchTest(const BaseDDSketchTest& test) = delete;
+    BaseDDSketchTest(BaseDDSketchTest&& test) = delete;
+
+    BaseDDSketchTest& operator=(const BaseDDSketchTest& test) = delete;
+    BaseDDSketchTest& operator=(BaseDDSketchTest&& test) = delete;
+
  protected:
+    BaseDDSketchTest() = default;
     virtual ~BaseDDSketchTest() = default;
 
     /* Create a new DDSketch of the appropriate type */
@@ -871,8 +907,10 @@ class BaseDDSketchTest : public ::testing::Test, CRTP<ConcreteDDSketch> {
                 dataset->populate(size);
 
                 auto sketch = create_ddsketch();
-                for (const auto& value : *dataset)
+
+                for (const auto& value : *dataset) {
                     sketch.add(value);
+                }
 
                 evaluate_sketch_accuracy(
                     sketch, *dataset, kTestRelativeAccuracy);
@@ -886,8 +924,9 @@ class BaseDDSketchTest : public ::testing::Test, CRTP<ConcreteDDSketch> {
         dataset.populate(1000);
 
         StoreValues dataset_values;
-        for (const auto& value : dataset)
+        for (const auto& value : dataset) {
             dataset_values.push_back(value);
+        }
 
         auto sketch = create_ddsketch();
         for (const auto& pair : Counter(dataset_values)) {
@@ -904,8 +943,9 @@ class BaseDDSketchTest : public ::testing::Test, CRTP<ConcreteDDSketch> {
     void test_add_decimal() {
         auto sketch = create_ddsketch();
 
-        for (auto value = 0; value < 100; ++value)
+        for (auto value = 0; value < 100; ++value) {
             sketch.add(value, 1.1);
+        }
 
         sketch.add(100, 110.0);
 
@@ -966,10 +1006,11 @@ class BaseDDSketchTest : public ::testing::Test, CRTP<ConcreteDDSketch> {
                 auto sketch2 = create_ddsketch();
 
                 for (const auto& value : dataset) {
-                    if (random(generator) > 0.7)
+                    if (random(generator) > 0.7) {
                         sketch1.add(value);
-                    else
+                    } else {
                         sketch2.add(value);
+                    }
                 }
 
                 sketch1.merge(sketch2);
@@ -1026,8 +1067,9 @@ class BaseDDSketchTest : public ::testing::Test, CRTP<ConcreteDDSketch> {
         auto dataset1 = Normal();
         dataset1.populate(100);
 
-        for (const auto& value : dataset1)
+        for (const auto& value : dataset1) {
             sketch1.add(value);
+        }
 
         sketch1.merge(sketch2);
 
@@ -1037,8 +1079,9 @@ class BaseDDSketchTest : public ::testing::Test, CRTP<ConcreteDDSketch> {
         auto dataset2 = Normal();
         dataset2.populate(50);
 
-        for (const auto& value : dataset2)
+        for (const auto& value : dataset2) {
             sketch2.add(value);
+        }
 
         auto sketch2_summary =
             SketchSummary<ConcreteDDSketch>(sketch2, kTestQuantiles);
@@ -1047,8 +1090,9 @@ class BaseDDSketchTest : public ::testing::Test, CRTP<ConcreteDDSketch> {
         auto dataset3 = Normal();
         dataset3.populate(10);
 
-        for (const auto& value : dataset3)
+        for (const auto& value : dataset3) {
             sketch1.add(value);
+        }
 
         /* Changes to sketch1 does not affect sketch2 after merge */
         sketch2_summary =
@@ -1069,6 +1113,7 @@ class BaseDDSketchTest : public ::testing::Test, CRTP<ConcreteDDSketch> {
 
     auto get_datasets() {
         std::vector<std::unique_ptr<GenericDataSet>> test_datasets;
+
         test_datasets.emplace_back(std::make_unique<UniformForward>());
         test_datasets.emplace_back(std::make_unique<UniformBackward>());
         test_datasets.emplace_back(std::make_unique<UniformZoomIn>());
@@ -1097,7 +1142,7 @@ class BaseDDSketchTest : public ::testing::Test, CRTP<ConcreteDDSketch> {
 
 class DDSketchTest : public BaseDDSketchTest<DDSketch> {
  protected:
-    DDSketch create_ddsketch() {
+    DDSketch create_ddsketch() override {
         return DDSketch(kTestRelativeAccuracy);
     }
 };

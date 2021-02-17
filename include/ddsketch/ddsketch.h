@@ -6,12 +6,13 @@
 #ifndef INCLUDES_DDSKETCH_DDSKETCH_H_
 #define INCLUDES_DDSKETCH_DDSKETCH_H_
 
-#include <string>
-#include <deque>
-#include <sstream>
 #include <algorithm>
+#include <cmath>
+#include <deque>
 #include <limits>
 #include <numeric>
+#include <sstream>
+#include <string>
 
 /*
  * A quantile sketch with relative-error guarantees. This sketch computes
@@ -78,16 +79,34 @@ class BinList {
 
     BinList() = default;
 
+    ~BinList() = default;
+
     explicit BinList(size_t size) {
         initialize_with_zeros(size);
     }
 
-    BinList(const BinList<BinItem>& bins) : data_(bins.data_) {
+    BinList(const BinList<BinItem>& bins)
+        : data_(bins.data_) {
+    }
+
+    BinList(BinList<BinItem>&& bins) noexcept
+        : data_(std::move(bins.data_)) {
+    }
+
+    BinList& operator=(const BinList<BinItem>& bins) {
+        data_ =  bins.data_;
+        return *this;
+    }
+
+    BinList& operator=(BinList<BinItem>&& bins) noexcept {
+        data_ = std::move(bins.data_);
+        return *this;
     }
 
     friend std::ostream& operator<<(std::ostream& os, const BinList& bins) {
-        for (auto & elem : bins)
+        for (const auto& elem : bins) {
             os << elem << " ";
+        }
 
         return os;
     }
@@ -117,8 +136,9 @@ class BinList {
     }
 
     BinItem collapsed_count(int start_idx, int end_idx) const {
-        if (index_outside_bounds(start_idx) || index_outside_bounds(end_idx))
+        if (index_outside_bounds(start_idx) || index_outside_bounds(end_idx)) {
             throw std::invalid_argument("Indexes out of bounds");
+        }
 
         return std::accumulate(
                    data_.begin() + start_idx,
@@ -224,11 +244,11 @@ class BaseStore : CRTP<ConcreteStore> {
      * Updates the counter at the specified index key,
      * growing the number of bins if necessary.
      */
-    void add(RealValue key, RealValue weight) {
+    void add(Index key, RealValue weight) {
         this->underlying()->add(key, weight);
     }
 
-    void add(RealValue key) {
+    void add(Index key) {
         this->underlying()->add(key, 1.0);
     }
 
@@ -261,6 +281,12 @@ class BaseStore : CRTP<ConcreteStore> {
  protected:
      BaseStore() = default;
     ~BaseStore() = default;
+
+    BaseStore(const BaseStore& store) = default;
+    BaseStore(BaseStore&& store) noexcept = default;
+
+    BaseStore& operator=(const BaseStore& store) = default;
+    BaseStore& operator=(BaseStore&& store) noexcept = default;
 };
 
 /*
@@ -284,8 +310,10 @@ class BaseDenseStore : public BaseStore<BaseDenseStore<ConcreteStore>> {
         repr <<  "{";
 
         Index i = 0;
-        for (const auto& sbin : bins_)
+
+        for (const auto& sbin : bins_) {
             repr << i++ + offset_ << ": " << sbin << ", ";
+        }
 
         repr << "}, ";
 
@@ -338,8 +366,9 @@ class BaseDenseStore : public BaseStore<BaseDenseStore<ConcreteStore>> {
         for (const auto bin_ct : bins_) {
             running_ct += bin_ct;
             if ((lower && running_ct > rank) ||
-                (!lower && running_ct >= rank + 1))
+                (!lower && running_ct >= rank + 1)) {
                 return idx + offset_;
+            }
             ++idx;
         }
 
@@ -347,19 +376,22 @@ class BaseDenseStore : public BaseStore<BaseDenseStore<ConcreteStore>> {
     }
 
     void merge(const BaseDenseStore& store) {
-        if (store.count_ == 0)
+        if (store.count_ == 0) {
             return;
+        }
 
         if (count_ == 0) {
             copy(store);
             return;
         }
 
-        if (store.min_key_ < min_key_ || store.max_key_ > max_key_)
+        if (store.min_key_ < min_key_ || store.max_key_ > max_key_) {
             extend_range(store.min_key_, store.max_key_);
+        }
 
-        for (auto key = store.min_key_; key <= store.max_key_ ; ++key)
+        for (auto key = store.min_key_; key <= store.max_key_ ; ++key) {
             bins_[key - offset_] += store.bins_[key - store.offset_];
+        }
 
         count_ += store.count_;
     }
@@ -425,8 +457,9 @@ class BaseDenseStore : public BaseStore<BaseDenseStore<ConcreteStore>> {
             /* Grow the bins */
             Index new_length = get_new_length(new_min_key, new_max_key);
 
-            if (new_length > length())
+            if (new_length > length()) {
                 bins_.extend_back_with_zeros(new_length - length());
+            }
 
             adjust(new_min_key, new_max_key);
         }
@@ -438,8 +471,9 @@ class BaseDenseStore : public BaseStore<BaseDenseStore<ConcreteStore>> {
 
     /* Calculate the bin index for the key, extending the range if necessary */
     virtual Index get_index(Index key) {
-        if (key < min_key_ || key > max_key_)
+        if (key < min_key_ || key > max_key_) {
             extend_range(key);
+        }
 
         return key - offset_;
     }
@@ -493,16 +527,18 @@ class CollapsingLowestDenseStore
     }
 
     void merge(const CollapsingLowestDenseStore& store) {
-        if (store.count_ == 0)
+        if (store.count_ == 0) {
             return;
+        }
 
         if (count_ == 0) {
             copy(store);
             return;
         }
 
-        if (store.min_key_ < min_key_ || store.max_key_ > max_key_)
+        if (store.min_key_ < min_key_ || store.max_key_ > max_key_) {
             extend_range(store.min_key_, store.max_key_);
+        }
 
         auto collapse_start_idx = store.min_key_ - store.offset_;
 
@@ -520,8 +556,9 @@ class CollapsingLowestDenseStore
         }
 
         for (auto key = collapse_end_idx + store.offset_;
-                       key <= store.max_key_; ++key)
+                  key <= store.max_key_; ++key) {
             bins_[key - offset_] += store.bins_[key - store.offset_];
+        }
 
         count_ += store.count_;
     }
@@ -537,13 +574,15 @@ class CollapsingLowestDenseStore
     /* Calculate the bin index for the key, extending the range if necessary */
     Index get_index(Index key) override {
         if (key < min_key_) {
-            if (is_collapsed_)
+            if (is_collapsed_) {
                 return 0;
+            }
 
             extend_range(key);
 
-            if (is_collapsed_)
+            if (is_collapsed_) {
                 return 0;
+            }
         } else if (key > max_key_) {
             extend_range(key);
         }
@@ -612,7 +651,6 @@ class CollapsingLowestDenseStore
         }
     }
 
- private:
     Index bin_limit_;  /* The maximum number of bins */
     bool is_collapsed_;
 };
@@ -648,16 +686,18 @@ class CollapsingHighestDenseStore
     }
 
     void merge(const CollapsingHighestDenseStore& store) {
-        if (store.count_ == 0)
+        if (store.count_ == 0) {
             return;
+        }
 
         if (count_ == 0) {
             copy(store);
             return;
         }
 
-        if (store.min_key_ < min_key_ || store.max_key_ > max_key_)
+        if (store.min_key_ < min_key_ || store.max_key_ > max_key_) {
             extend_range(store.min_key_, store.max_key_);
+        }
 
         auto collapse_end_idx = store.max_key_ - store.offset_ + 1;
         auto collapse_start_idx =
@@ -673,8 +713,9 @@ class CollapsingHighestDenseStore
         }
 
         for (auto key = store.min_key_;
-                 key < collapse_start_idx + store.offset_; ++key)
+                 key < collapse_start_idx + store.offset_; ++key) {
             bins_[key - offset_] += store.bins_[key - store.offset_];
+        }
 
         count_ += store.count_;
     }
@@ -690,13 +731,15 @@ class CollapsingHighestDenseStore
     /* Calculate the bin index for the key, extending the range if necessary */
     Index get_index(Index key) override {
         if (key > max_key_) {
-            if (is_collapsed_)
+            if (is_collapsed_) {
                 return length() - 1;
+            }
 
             extend_range(key);
 
-            if (is_collapsed_)
+            if (is_collapsed_) {
                 return length() - 1;
+            }
         } else if (key < min_key_) {
             extend_range(key);
         }
@@ -764,7 +807,6 @@ class CollapsingHighestDenseStore
         }
     }
 
- private:
     Index bin_limit_;    /* The maximum number of bins */
     bool is_collapsed_;
 };
@@ -774,7 +816,7 @@ class CollapsingHighestDenseStore
  */
 class IllegalArgumentException : public std::exception {
  public:
-    const char* what() const throw() {
+    const char* what() const noexcept override {
         return message_.c_str();
     }
 
@@ -792,7 +834,7 @@ class IllegalArgumentException : public std::exception {
  */
 class UnequalSketchParametersException : public std::exception {
  public:
-    const char* what() const throw() {
+    const char* what() const noexcept override {
         return "Cannot merge two DDSketches with different parameters";
     }
 };
@@ -837,6 +879,10 @@ class KeyMapping {
         return relative_accuracy_;
     }
 
+    RealValue gamma() const {
+        return gamma_;
+    }
+
     RealValue min_possible() const {
         return min_possible_;
     }
@@ -845,30 +891,21 @@ class KeyMapping {
         return max_possible_;
     }
 
-    RealValue gamma() const {
-        return gamma_;
+    RealValue multiplier() const {
+        return multiplier_;
     }
 
- private:
-    static RealValue adjust_accuracy(RealValue relative_accuracy) {
-        if (relative_accuracy <= 0.0 || relative_accuracy >= 1.0)
-            return kDefaultRelativeAccuracy;
-
-        return relative_accuracy;
+    RealValue& multiplier() {
+        return multiplier_;
     }
-
-    /*
-     * The accuracy guarantee.
-     * Referred to as alpha in the paper. (0. < alpha < 1.)
-     */
-    static constexpr RealValue kDefaultRelativeAccuracy = 0.01;
 
  protected:
     explicit KeyMapping(RealValue relative_accuracy,
                         RealValue offset = 0.0) {
-        if (relative_accuracy <= 0.0 || relative_accuracy >= 1.0)
+        if (relative_accuracy <= 0.0 || relative_accuracy >= 1.0) {
             throw IllegalArgumentException(
                 "Relative accuracy must be between 0 and 1");
+        }
 
         relative_accuracy_ = relative_accuracy;
         offset_ = offset;
@@ -888,6 +925,20 @@ class KeyMapping {
     /* Return (an approximation of) gamma to the power value */
     virtual RealValue pow_gamma(RealValue value) = 0;
 
+ private:
+    static RealValue adjust_accuracy(RealValue relative_accuracy) {
+        if (relative_accuracy <= 0.0 || relative_accuracy >= 1.0) {
+            return kDefaultRelativeAccuracy;
+        }
+
+        return relative_accuracy;
+    }
+
+    /*
+     * The accuracy guarantee.
+     * Referred to as alpha in the paper. (0. < alpha < 1.)
+     */
+    static constexpr auto kDefaultRelativeAccuracy = 0.01;
     /*
      * The accuracy guarantee.
      * referred to as alpha in the paper (0. < alpha < 1.)
@@ -926,16 +977,16 @@ class LogarithmicMapping : public KeyMapping {
     explicit LogarithmicMapping(RealValue relative_accuracy,
                                 RealValue offset = 0.0) :
         KeyMapping(relative_accuracy, offset) {
-        multiplier_ *= std::log(2.0);
+        multiplier() *= std::log(2.0);
     }
 
  private:
     RealValue log_gamma(RealValue value) override {
-        return std::log2(value) * multiplier_;
+        return std::log2(value) * multiplier();
     }
 
     RealValue pow_gamma(RealValue value) override {
-        return std::exp2(value / multiplier_);
+        return std::exp2(value / multiplier());
     }
 };
 
@@ -961,8 +1012,7 @@ class LinearlyInterpolatedMapping : public KeyMapping {
      * so we adjust m and e accordingly
      */
     static RealValue log2_approx(RealValue value) {
-        int exponent;
-
+        auto exponent = 0;
         auto mantissa = std::frexp(value, &exponent);
         auto significand = 2.0 * mantissa - 1;
         return significand + (exponent - 1);
@@ -976,11 +1026,11 @@ class LinearlyInterpolatedMapping : public KeyMapping {
     }
 
     RealValue log_gamma(RealValue value) override {
-        return log2_approx(value) * multiplier_;
+        return log2_approx(value) * multiplier();
     }
 
     RealValue pow_gamma(RealValue value) override {
-        return exp2_approx(value / multiplier_);
+        return exp2_approx(value / multiplier());
     }
 };
 
@@ -998,13 +1048,13 @@ class CubicallyInterpolatedMapping : public KeyMapping {
     explicit CubicallyInterpolatedMapping(RealValue relative_accuracy,
                                           RealValue offset = 0.0) :
         KeyMapping(relative_accuracy, offset) {
-        multiplier_ /= C_;
+        multiplier() /= C_;
     }
 
  private:
     /* Approximates log2 using a cubic polynomial */
     static RealValue cubic_log2_approx(RealValue value) {
-        int exponent;
+        auto exponent = 0;
         auto mantissa = std::frexp(value, &exponent);
         auto significand = 2.0 * mantissa - 1;
 
@@ -1015,7 +1065,8 @@ class CubicallyInterpolatedMapping : public KeyMapping {
 
     /* Derived from Cardano's formula */
     static RealValue cubic_exp2_approx(RealValue value) {
-        auto exponent =  std::floor(value);
+        auto floor_value = std::floor(value);
+        auto exponent = static_cast<int>(floor_value);
         auto delta_0 = B_ * B_ - 3 * A_ * C_;
         auto delta_1 = (
               2  * B_ * B_ * B_
@@ -1036,11 +1087,11 @@ class CubicallyInterpolatedMapping : public KeyMapping {
     }
 
     RealValue log_gamma(RealValue value) override {
-        return cubic_log2_approx(value) * multiplier_;
+        return cubic_log2_approx(value) * multiplier();
     }
 
     RealValue pow_gamma(RealValue value) override {
-        return cubic_exp2_approx(value / multiplier_);
+        return cubic_exp2_approx(value / multiplier());
     }
 
     static constexpr RealValue A_ = 6.0 / 35;
@@ -1086,8 +1137,9 @@ class BaseDDSketch {
 
     /* Add a value to the sketch */
     void add(RealValue val, RealValue weight = 1.0) {
-        if (weight <= 0.0)
+        if (weight <= 0.0) {
             throw IllegalArgumentException("Weight must be positive");
+        }
 
         if (val > mapping_.min_possible()) {
             store_.add(mapping_.key(val), weight);
@@ -1101,11 +1153,13 @@ class BaseDDSketch {
         count_ += weight;
         sum_ += val * weight;
 
-        if (val < min_)
+        if (val < min_) {
             min_ = val;
+        }
 
-        if (val > max_)
+        if (val > max_) {
             max_ = val;
+        }
     }
 
     /*
@@ -1116,10 +1170,11 @@ class BaseDDSketch {
      *       The value at the specified quantile or NaN if the sketch is empty
      */
     RealValue get_quantile_value(RealValue quantile) {
-        RealValue quantile_value;
+        auto quantile_value = 0.0;
 
-        if (quantile < 0 || quantile > 1 || count_ == 0)
+        if (quantile < 0 || quantile > 1 || count_ == 0) {
             return std::nan("");
+        }
 
         auto rank = quantile * (count_ - 1);
 
@@ -1128,7 +1183,7 @@ class BaseDDSketch {
             auto key = negative_store_.key_at_rank(reversed_rank, false);
             quantile_value = -mapping_.value(key);
         } else if (rank < zero_count_ + negative_store_.count()) {
-            return 0;
+            return 0.0;
         } else {
             auto key = store_.key_at_rank(
                             rank - zero_count_ - negative_store_.count());
@@ -1145,11 +1200,13 @@ class BaseDDSketch {
      *  added to both this and the input sketch.
      */
     void merge(const BaseDDSketch& sketch) {
-        if (!mergeable(sketch))
+        if (!mergeable(sketch)) {
             throw UnequalSketchParametersException();
+        }
 
-        if (sketch.count_ == 0)
+        if (sketch.count_ == 0) {
             return;
+        }
 
         if (count_ == 0) {
             copy(sketch);
@@ -1165,11 +1222,13 @@ class BaseDDSketch {
         count_ += sketch.count_;
         sum_ += sketch.sum_;
 
-        if (sketch.min_ < min_)
+        if (sketch.min_ < min_) {
             min_ = sketch.min_;
+        }
 
-        if (sketch.max_ > max_)
+        if (sketch.max_ > max_) {
             max_ = sketch.max_;
+        }
     }
 
     /* Two sketches can be merged only if their gammas are equal */
@@ -1190,17 +1249,18 @@ class BaseDDSketch {
 
  protected:
      static Index adjust_bin_limit(Index bin_limit) {
-        if (bin_limit <= 0)
+        if (bin_limit <= 0) {
             return kDefaultBinLimit;
+        }
 
         return bin_limit;
     }
 
+ private:
     Mapping mapping_;       /* Map btw values and store bins */
     Store store_;           /* Storage for positive values */
     Store negative_store_;  /* Storage for negative values */
     RealValue zero_count_;  /* The count of zero values */
-
     RealValue count_;       /* The number of values seen by the sketch */
     RealValue min_;         /* The minimum value seen by the sketch */
     RealValue max_;         /* The maximum value seen by the sketch */
