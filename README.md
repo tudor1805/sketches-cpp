@@ -5,7 +5,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/f857296d43db467cbff1d498650427b1)](https://www.codacy.com/gh/tudor1805/sketches-cpp/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tudor1805/sketches-cpp&amp;utm_campaign=Badge_Grade)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-This repo contains a C++14 port of the implementation for the distributed quantile sketch algorithm DDSketch [1].
+This repo contains a C++14 port of the implementation for the distributed quantile sketch algorithm DDSketch [[1]](#References).
 
 The port is based on the Python implementation - [reference-commit](https://github.com/DataDog/sketches-py/commit/4ea7ffafd91747d0b868488d7d6836f6473f5e83)
 
@@ -65,4 +65,4 @@ Given the fact that **ddsketch** only computes a logarithm for every input value
 Apache 2.0
 
 ### References
-[1] Charles Masson and Jee E Rim and Homin K. Lee. DDSketch: A fast and fully-mergeable quantile sketch with relative-error guarantees. PVLDB, 12(12): 2195-2205, 2019.
+Charles Masson and Jee E Rim and Homin K. Lee. DDSketch: A fast and fully-mergeable quantile sketch with relative-error guarantees. PVLDB, 12(12): 2195-2205, 2019.
