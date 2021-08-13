@@ -28,13 +28,7 @@ script:
   - cmake --build .
   - examples/DDSketch_Examples
   - cd .. && rm -rf build
-  - echo "Building & Running Unit Tests"
-  - mkdir build && cd build
-  - cmake ../ -DBUILD_UNIT_TESTS=ON
-  - cmake --build .
-  - tests/DDSketch_Unit_Tests
-  - cd .. && rm -rf build
-  - echo "Running Test Coverage"
+  - echo "Running Unit Tests and checking coverage"
   - mkdir build && cd build
   - cmake ../ -DRUN_COVERAGE=ON
   - cmake --build .

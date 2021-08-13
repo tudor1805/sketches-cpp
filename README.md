@@ -1,6 +1,6 @@
 # ddsketch
 
-[![Build Status](https://travis-ci.org/tudor1805/sketches-cpp.svg?branch=master)](https://travis-ci.org/github/tudor1805/sketches-cpp/builds)
+[![Build Status](https://travis-ci.com/tudor1805/sketches-cpp.svg?branch=master)](https://travis-ci.com/github/tudor1805/sketches-cpp/builds)
 [![Coverage Status](https://coveralls.io/repos/github/tudor1805/sketches-cpp/badge.svg?branch=master)](https://coveralls.io/github/tudor1805/sketches-cpp?branch=master)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/f857296d43db467cbff1d498650427b1)](https://www.codacy.com/gh/tudor1805/sketches-cpp/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tudor1805/sketches-cpp&amp;utm_campaign=Badge_Grade)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -49,6 +49,18 @@ As the implementation uses some Modern C++ features, you will need to compile yo
                   << "Computed Quantile Value: " << computed_quantile << "\n";
     }
 
+## Build
+
+The build system uses [CMake](https://cmake.org/).
+You can compile the example application by running the following commands:
+
+    mkdir build && cd build
+
+    cmake ../ -DBUILD_EXAMPLES=ON
+    cmake --build .
+
+    examples/DDSketch_Examples
+
 ## Performance
 
 Below, we will attempt to benchmark the insertion rate of the algorithm
@@ -65,4 +77,4 @@ Given the fact that **ddsketch** only computes a logarithm for every input value
 Apache 2.0
 
 ### References
-Charles Masson and Jee E Rim and Homin K. Lee. DDSketch: A fast and fully-mergeable quantile sketch with relative-error guarantees. PVLDB, 12(12): 2195-2205, 2019.
+Charles Masson and Jee E Rim and Homin K. Lee. DDSketch: A fast and fully-mergeable quantile sketch with relative-error guarantees. PVLDB, 12(12): 2195-2205, 2019
