@@ -23,23 +23,37 @@ script:
   - sudo cp ./lib/libgtest*.a /usr/lib
   - popd
   - echo "Building & Running Sample Applications"
-  - pushd examples
-  - make run
-  - popd
+  - mkdir build && cd build
+  - cmake ../ -DBUILD_EXAMPLES=ON
+  - cmake --build .
+  - examples/DDSketch_Examples
+  - cd .. && rm -rf build
   - echo "Building & Running Unit Tests"
-  - pushd tests
-  - make run
-  - popd
+  - mkdir build && cd build
+  - cmake ../ -DBUILD_UNIT_TESTS=ON
+  - cmake --build .
+  - tests/DDSketch_Unit_Tests
+  - cd .. && rm -rf build
   - echo "Running Test Coverage"
-  - pushd tests
-  - make clean && make coverage
-  - popd
+  - mkdir build && cd build
+  - cmake ../ -DRUN_COVERAGE=ON
+  - cmake --build .
+  - tests/DDSketch_Unit_Tests
+  - cd ..
   - echo "Done"
 
 after_success:
-  # Collect coverage and push to coveralls.info.
-  # Ignore third party source code and tests.
+  # Collect coverage and push to coveralls.info
+  # Ignore third party source code and tests
   - if [ "${CC}" = "gcc" ]; then
+        find build/
+        \(
+            -name '*.gcda' -or
+            -name '*.gcno' -or
+            -name 'DDSketch_Unit_Tests'
+        \)
+            -exec cp {} tests/ \; ;
+        rm -rf build;
         cd tests;
         coveralls
             --root ../
@@ -50,4 +64,3 @@ after_success:
 
 notifications:
   email: false
-
